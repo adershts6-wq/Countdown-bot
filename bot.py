@@ -515,44 +515,52 @@ async def reminder_job(context: ContextTypes.DEFAULT_TYPE):
 
 # ---------------- Main -----------------
 from flask import Flask
-import threading, os
+import threading, os, asyncio
 
 def main():
     BOT_TOKEN = "8271513610:AAGnLvMUtIBnxRiNfOnIqRJOoy1xqwqtfio"
 
-    # database ready
+    if not BOT_TOKEN:
+        print("❌ Please set BOT_TOKEN environment variable or edit script")
+        return
+
+    # ensure sqlite tables ready
     init_db()
 
-    # telegram bot create cheyyuka
+    # ✅ enable job queue
     app_tg = ApplicationBuilder().token(BOT_TOKEN).build()
     job_queue = app_tg.job_queue
 
-    # handlers same
+    # handlers
     app_tg.add_handler(CommandHandler("start", start))
     app_tg.add_handler(CallbackQueryHandler(callback_query))
     app_tg.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
     app_tg.add_handler(ChatMemberHandler(my_chat_member_update, ChatMemberHandler.MY_CHAT_MEMBER))
 
-    # reminder job
+    # schedule reminder job every 60 seconds
     if job_queue:
         job_queue.run_repeating(reminder_job, interval=60)
+    else:
+        print("⚠️ JobQueue not available")
 
-    print("✅ Bot is running on Render (Flask + Thread)")
+    print("✅ Bot is running on Render (Flask + Async Thread)")
 
-    # Flask web server (Render detect cheyyan vendi)
+    # --- Flask server for Render ---
     web_app = Flask(__name__)
 
     @web_app.route('/')
     def home():
         return "Bot is running on Render!"
 
-    # Telegram bot background il run cheyyan
+    # --- Asyncio fix for run_polling() ---
     def run_tg():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
         app_tg.run_polling()
 
     threading.Thread(target=run_tg).start()
 
-    # Flask run cheyyuka — Render ith port kand pidikkum
+    # Run Flask server (Render detects this port)
     web_app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
 
 
