@@ -542,21 +542,23 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(msg, parse_mode="Markdown")
 
 # --- Webhook Setup for Render ---
-from telegram.ext import Application
 from flask import Flask, request
+from telegram.ext import Application
+from telegram import Update     # ✅ added this line (important!)
 import asyncio
 
+# Create bot and web server
 application = Application.builder().token(BOT_TOKEN).build()
 app = Flask(__name__)
 
-# Flask route to receive updates
+# Route to receive Telegram updates
 @app.route(f"/{BOT_TOKEN}", methods=["POST"])
 def webhook_update():
     update = Update.de_json(request.get_json(force=True), application.bot)
     application.update_queue.put_nowait(update)
     return "OK", 200
 
-# Home route (optional)
+# Optional home route (for testing)
 @app.route("/", methods=["GET"])
 def home():
     return "Bot running via webhook!", 200
