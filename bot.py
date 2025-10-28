@@ -567,9 +567,17 @@ if __name__ == "__main__":
     init_db()  # ensure DB ready
 
     async def main():
+        # Build webhook URL from Render-provided hostname
         WEBHOOK_URL = f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME')}/{BOT_TOKEN}"
+
+        # Initialize the Application properly before using it
+        await application.initialize()
+
+        # Set webhook on Telegram
         await application.bot.set_webhook(WEBHOOK_URL)
         print("✅ Webhook set to:", WEBHOOK_URL)
+
+        # Start Flask so Telegram can POST updates to our route
         app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
 
     asyncio.run(main())
