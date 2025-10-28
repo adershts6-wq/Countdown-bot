@@ -541,43 +541,51 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(msg, parse_mode="Markdown")
 
-# --- Webhook Setup for Render ---
+# ================= Webhook Setup for Render =================
 from flask import Flask, request
-from telegram.ext import Application
-from telegram import Update     # ✅ added this line (important!)
+from telegram.ext import Application, CommandHandler
+from telegram import Update
 import asyncio
 
-# Create bot and web server
-application = Application.builder().token(BOT_TOKEN).build()
+# --- Create bot and Flask web server ---
 app = Flask(__name__)
+application = Application.builder().token(BOT_TOKEN).build()
 
-# Route to receive Telegram updates
+# --- Register bot commands ---
+async def start_command(update: Update, context):
+    await update.message.reply_text("✅ Bot is live and running on Render!")
+
+application.add_handler(CommandHandler("start", start_command))
+application.add_handler(CommandHandler("status", status_command))
+
+# --- Route to receive Telegram updates ---
 @app.route(f"/{BOT_TOKEN}", methods=["POST"])
 def webhook_update():
     update = Update.de_json(request.get_json(force=True), application.bot)
-    asyncio.run(application.process_update(update))   # ✅ Direct process
+    asyncio.run(application.process_update(update))
     return "OK", 200
 
-# Optional home route (for testing)
+# --- Optional test route ---
 @app.route("/", methods=["GET"])
 def home():
     return "Bot running via webhook!", 200
+
 
 if __name__ == "__main__":
     init_db()  # ensure DB ready
 
     async def main():
-        # Build webhook URL from Render-provided hostname
+        # 🌐 Build Webhook URL from Render-provided hostname
         WEBHOOK_URL = f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME')}/{BOT_TOKEN}"
 
-        # Initialize the Application properly before using it
+        # ⚙️ Initialize the bot application
         await application.initialize()
 
-        # Set webhook on Telegram
+        # 📬 Set webhook on Telegram
         await application.bot.set_webhook(WEBHOOK_URL)
         print("✅ Webhook set to:", WEBHOOK_URL)
 
-        # Start Flask so Telegram can POST updates to our route
+        # 🚀 Start Flask to receive webhook updates
         app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
 
     asyncio.run(main())
