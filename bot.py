@@ -541,60 +541,31 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(msg, parse_mode="Markdown")
 
-# ---------------- Main -----------------
-from flask import Flask
-import threading, os, asyncio
+# --- Webhook Setup for Render ---
+from flask import Flask, request
+import asyncio
 
-def main():
-    BOT_TOKEN = "8271513610:AAGnLvMUtIBnxRiNfOnIqRJOoy1xqwqtfio"
+app = Flask(__name__)
 
-    if not BOT_TOKEN:
-        print("❌ Please set BOT_TOKEN environment variable or edit script")
-        return
+# Flask route to receive updates
+@app.route(f"/{BOT_TOKEN}", methods=["POST"])
+def webhook_update():
+    update = Update.de_json(request.get_json(force=True), application.bot)
+    application.update_queue.put_nowait(update)
+    return "OK", 200
 
-    # Database initialize
-    init_db()
-
-    # Create bot
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    job_queue = app.job_queue
-
-    # Handlers
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("status", status_command))
-    app.add_handler(CallbackQueryHandler(callback_query))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
-    app.add_handler(ChatMemberHandler(my_chat_member_update, ChatMemberHandler.MY_CHAT_MEMBER))
-
-    # Reminder job
-    if job_queue:
-        job_queue.run_repeating(reminder_job, interval=60)
-
-    print("✅ Bot is running... Press Ctrl+C to stop.")
-    
-    # Flask setup for Render
-    web_app = Flask(__name__)
-
-    @web_app.route('/')
-    def home():
-        return "Bot is running on Render!"
-
-    # ✅ async-safe polling start
-    async def run_tg():
-        await app.initialize()
-        await app.start()
-        print("🤖 Bot polling started...")
-        await app.updater.start_polling()
-        await asyncio.Event().wait()  # keep alive
-
-    def start_asyncio_loop():
-        asyncio.run(run_tg())
-
-    threading.Thread(target=start_asyncio_loop).start()
-
-    # Flask port open for Render detection
-    web_app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
-
+# Home route (optional)
+@app.route("/", methods=["GET"])
+def home():
+    return "Bot running via webhook!", 200
 
 if __name__ == "__main__":
-    main()
+    init_db()  # ensure DB ready
+
+    async def main():
+        WEBHOOK_URL = f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME')}/{BOT_TOKEN}"
+        await application.bot.set_webhook(WEBHOOK_URL)
+        print("✅ Webhook set to:", WEBHOOK_URL)
+        app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
+    asyncio.run(main())
