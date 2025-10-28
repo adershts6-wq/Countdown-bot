@@ -542,10 +542,8 @@ async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(msg, parse_mode="Markdown")
 
 # --- Webhook Setup for Render ---
-from flask import Flask, request
-import asyncio
-
-app = Flask(__name__)
+from telegram.ext import Application
+application = Application.builder().token(BOT_TOKEN).build()
 
 # Flask route to receive updates
 @app.route(f"/{BOT_TOKEN}", methods=["POST"])
