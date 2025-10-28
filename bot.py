@@ -550,21 +550,22 @@ def main():
     init_db()
 
     # Create bot
-    app_tg = ApplicationBuilder().token(BOT_TOKEN).build()
-    job_queue = app_tg.job_queue
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    job_queue = app.job_queue
 
     # Handlers
-    app_tg.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("status", status_command))
-    app_tg.add_handler(CallbackQueryHandler(callback_query))
-    app_tg.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
-    app_tg.add_handler(ChatMemberHandler(my_chat_member_update, ChatMemberHandler.MY_CHAT_MEMBER))
+    app.add_handler(CallbackQueryHandler(callback_query))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
+    app.add_handler(ChatMemberHandler(my_chat_member_update, ChatMemberHandler.MY_CHAT_MEMBER))
 
     # Reminder job
     if job_queue:
         job_queue.run_repeating(reminder_job, interval=60)
 
-    print("✅ Starting bot with Flask background server...")
+    print("✅ Bot is running... Press Ctrl+C to stop.")
+    app.run_polling()
 
     # Flask setup for Render
     web_app = Flask(__name__)
