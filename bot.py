@@ -590,4 +590,14 @@ if __name__ == "__main__":
 
 if __name__ == "__main__":
     import threading
-    threading.Thread(target=lambda: asyncio.run(main())).start()
+
+    # Run the async main() in background
+    def run_async():
+        import asyncio
+        asyncio.run(main())
+
+    # Start main() thread safely
+    threading.Thread(target=run_async).start()
+
+    # Start Flask app on main thread
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
