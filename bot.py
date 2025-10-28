@@ -524,43 +524,46 @@ def main():
         print("❌ Please set BOT_TOKEN environment variable or edit script")
         return
 
-    # ensure sqlite tables ready
+    # Database initialize
     init_db()
 
-    # ✅ enable job queue
+    # Create bot
     app_tg = ApplicationBuilder().token(BOT_TOKEN).build()
     job_queue = app_tg.job_queue
 
-    # handlers
+    # Handlers
     app_tg.add_handler(CommandHandler("start", start))
     app_tg.add_handler(CallbackQueryHandler(callback_query))
     app_tg.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
     app_tg.add_handler(ChatMemberHandler(my_chat_member_update, ChatMemberHandler.MY_CHAT_MEMBER))
 
-    # schedule reminder job every 60 seconds
+    # Reminder job
     if job_queue:
         job_queue.run_repeating(reminder_job, interval=60)
-    else:
-        print("⚠️ JobQueue not available")
 
-    print("✅ Bot is running on Render (Flask + Async Thread)")
+    print("✅ Starting bot with Flask background server...")
 
-    # --- Flask server for Render ---
+    # Flask setup for Render
     web_app = Flask(__name__)
 
     @web_app.route('/')
     def home():
         return "Bot is running on Render!"
 
-    # --- Asyncio fix for run_polling() ---
-    def run_tg():
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        app_tg.run_polling()
+    # ✅ async-safe polling start
+    async def run_tg():
+        await app_tg.initialize()
+        await app_tg.start()
+        print("🤖 Bot polling started...")
+        await app_tg.updater.start_polling()
+        await asyncio.Event().wait()  # keep alive
 
-    threading.Thread(target=run_tg).start()
+    def start_asyncio_loop():
+        asyncio.run(run_tg())
 
-    # Run Flask server (Render detects this port)
+    threading.Thread(target=start_asyncio_loop).start()
+
+    # Flask port open for Render detection
     web_app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
 
 
