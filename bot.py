@@ -551,12 +551,12 @@ import asyncio
 app = Flask(__name__)
 application = Application.builder().token(BOT_TOKEN).build()
 
-# --- Register bot commands ---
-async def start_command(update: Update, context):
-    await update.message.reply_text("✅ Bot is live and running on Render!")
-
-application.add_handler(CommandHandler("start", start_command))
+application.add_handler(CommandHandler("start", start))
 application.add_handler(CommandHandler("status", status_command))
+application.add_handler(CommandHandler("about", about))
+application.add_handler(CallbackQueryHandler(callback_query))
+application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
+application.add_handler(ChatMemberHandler(my_chat_member_update, ChatMemberHandler.MY_CHAT_MEMBER))
 
 # --- Route to receive Telegram updates ---
 @app.route(f"/{BOT_TOKEN}", methods=["POST"])
