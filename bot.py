@@ -590,14 +590,24 @@ if __name__ == "__main__":
 
 if __name__ == "__main__":
     import threading
+    import asyncio
 
-    # Run the async main() in background
-    def run_async():
-        import asyncio
-        asyncio.run(main())
+    init_db()  # ensure DB ready
 
-    # Start main() thread safely
-    threading.Thread(target=run_async).start()
+    async def main():
+        WEBHOOK_URL = f"https://{os.getenv('RENDER_EXTERNAL_HOSTNAME')}/{BOT_TOKEN}"
+        await application.initialize()
+        await application.bot.set_webhook(WEBHOOK_URL)
+        print("✅ Webhook set to:", WEBHOOK_URL)
 
-    # Start Flask app on main thread
+    # Properly run asyncio loop inside a thread
+    def run_asyncio_loop():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(main())
+        loop.run_forever()  # keeps it alive!
+
+    threading.Thread(target=run_asyncio_loop).start()
+
+    # Start Flask main server
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
