@@ -575,11 +575,11 @@ def main():
 
     # ✅ async-safe polling start
     async def run_tg():
-        await app_tg.initialize()
-        await app_tg.start()
-        print("🤖 Bot polling started...")
-        await app_tg.updater.start_polling()
-        await asyncio.Event().wait()  # keep alive
+    await app.initialize()
+    await app.start()
+    print("🤖 Bot polling started...")
+    await app.updater.start_polling()
+    await asyncio.Event().wait()  # keep alive
 
     def start_asyncio_loop():
         asyncio.run(run_tg())
