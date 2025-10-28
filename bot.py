@@ -555,7 +555,7 @@ app = Flask(__name__)
 @app.route(f"/{BOT_TOKEN}", methods=["POST"])
 def webhook_update():
     update = Update.de_json(request.get_json(force=True), application.bot)
-    application.update_queue.put_nowait(update)
+    asyncio.run(application.process_update(update))   # ✅ Direct process
     return "OK", 200
 
 # Optional home route (for testing)
