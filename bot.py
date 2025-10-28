@@ -307,6 +307,30 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = get_text_for(chat_id, "welcome")
     await context.bot.send_message(chat_id=int(chat_id), text=text, reply_markup=build_main_menu(chat_id), parse_mode="Markdown")
 
+# ---------------- Status Command ----------------
+async def status_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = str(update.effective_chat.id)
+    ensure_chat_db(chat_id)
+    info = get_chat_info_db(chat_id)
+    events = list_events_db(chat_id)
+
+    lang = info.get("lang", "en")
+    texts = TEXTS.get(lang, TEXTS["en"])
+
+    reminder_state = "✅ ON" if info.get("reminder_on", 0) else "⏸ OFF"
+    reminder_time = info.get("reminder_time", DEFAULT_REMINDER_TIME)
+    total_events = len(events)
+
+    msg = (
+        f"📊 *Status Summary:*\n"
+        f"⏰ Reminder: {reminder_state}\n"
+        f"🕒 Time: {reminder_time}\n"
+        f"📅 Total Events: {total_events}\n"
+        f"🌐 Language: {lang.upper()}"
+    )
+
+    await update.message.reply_text(msg, parse_mode="Markdown")
+
 # --- ABOUT COMMAND ---
 async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = (
@@ -533,6 +557,7 @@ def main():
 
     # Handlers
     app_tg.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("status", status_command))
     app_tg.add_handler(CallbackQueryHandler(callback_query))
     app_tg.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
     app_tg.add_handler(ChatMemberHandler(my_chat_member_update, ChatMemberHandler.MY_CHAT_MEMBER))
