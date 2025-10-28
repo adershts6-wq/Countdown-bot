@@ -480,36 +480,42 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["action"] = None
 
 # ---------------- Reminder job ----------------
+from datetime import timedelta
+
 async def reminder_job(context: ContextTypes.DEFAULT_TYPE):
-    now = datetime.now().strftime("%H:%M")
+    now = datetime.now()
     chats = get_all_reminder_chats()
+
     for c in chats:
         try:
             chat_id = c["chat_id"]
             rem_time = c.get("reminder_time", DEFAULT_REMINDER_TIME)
-            if rem_time == now:
+            h, m = map(int, rem_time.split(":"))
+            rem_dt = now.replace(hour=h, minute=m, second=0, microsecond=0)
+
+            # ✅ Allow ±60 seconds difference
+            if abs((now - rem_dt).total_seconds()) <= 60:
                 events = list_events_db(chat_id)
                 if not events:
-                    # optionally skip sending if no events
                     continue
+
                 lang = c.get("lang", "en")
                 texts = TEXTS.get(lang, TEXTS["en"])
                 lines = [texts.get("events_header", "Daily Countdown:")]
+
                 for e in events:
-                    left = None
                     try:
                         left = (datetime.strptime(e["date"], "%Y-%m-%d").date() - datetime.now().date()).days
+                        if left > 0:
+                            lines.append(texts["event_future"].format(e["name"], left, e["date"]))
+                        elif left == 0:
+                            lines.append(texts["event_today"].format(e["name"]))
                     except:
                         continue
-                    if left > 0:
-                        lines.append(texts.get("event_future").format(e["name"], left, e["date"]))
-                    elif left == 0:
-                        lines.append(texts.get("event_today").format(e["name"]))
+
                 msg = "\n".join(lines)
-                try:
-                    await context.bot.send_message(chat_id=int(chat_id), text=msg, parse_mode="Markdown")
-                except Exception as exc:
-                    logger.exception("Failed send reminder to %s : %s", chat_id, exc)
+                await context.bot.send_message(chat_id=int(chat_id), text=msg, parse_mode="Markdown")
+
         except Exception as exc:
             logger.exception("Reminder loop error: %s", exc)
 
