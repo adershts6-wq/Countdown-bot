@@ -565,8 +565,7 @@ def main():
         job_queue.run_repeating(reminder_job, interval=60)
 
     print("✅ Bot is running... Press Ctrl+C to stop.")
-    app.run_polling()
-
+    
     # Flask setup for Render
     web_app = Flask(__name__)
 
